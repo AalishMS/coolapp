@@ -200,13 +200,14 @@ describe('USER MENU TESTS', () => {
   })
 
   it('USER-001: User menu opens when account icon clicked', async () => {
+    localStorage.setItem('user', JSON.stringify({ email: 'test@example.com', name: 'Test User' }))
     render(<MainLayout><div>Content</div></MainLayout>)
     
     const accountIcon = screen.getByTestId('AccountCircleIcon')
     await userEvent.click(accountIcon)
     
     await waitFor(() => {
-      expect(screen.getByText('Demo User')).toBeInTheDocument()
+      expect(screen.getByText('Test User')).toBeInTheDocument()
     }, { timeout: 3000 })
   })
 

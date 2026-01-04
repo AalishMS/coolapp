@@ -14,7 +14,6 @@ import {
   Tab,
   Tabs,
   AppBar,
-  useTheme,
 } from '@mui/material'
 import {
   Save as SaveIcon,
@@ -36,6 +35,7 @@ import {
   CustomDialog,
 } from '../../components/ui'
 import { useProductStore, useStockStore, useUndoRedoStore } from '../../store'
+import { useThemeContext } from '../../context/ThemeContext'
 import { Product } from '../../types/product'
 
 interface TabPanelProps {
@@ -61,10 +61,9 @@ const TabPanel = (props: TabPanelProps) => {
 }
 
 const Settings = () => {
-  const theme = useTheme()
+  const { mode, toggleTheme } = useThemeContext()
   const [tabValue, setTabValue] = useState(0)
   const [settings, setSettings] = useState({
-    darkMode: false,
     notifications: true,
     autoSave: true,
     lowStockAlerts: true,
@@ -193,8 +192,8 @@ const Settings = () => {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.darkMode}
-                    onChange={(e) => handleSettingChange('darkMode', e.target.checked)}
+                    checked={mode === 'dark'}
+                    onChange={toggleTheme}
                   />
                 }
                 label="Dark Mode"

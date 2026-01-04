@@ -8,15 +8,25 @@ import {
   Logout as LogoutIcon,
   Person as PersonIcon,
 } from '@mui/icons-material'
+import { useThemeContext } from '../../context/ThemeContext'
 
 interface HeaderProps {
   onMenuClick: () => void
 }
 
+interface User {
+  email: string
+  name: string
+}
+
 const Header = ({ onMenuClick }: HeaderProps) => {
   const navigate = useNavigate()
+  const { mode } = useThemeContext()
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const open = Boolean(anchorEl)
+
+  const userStr = localStorage.getItem('user')
+  const user: User = userStr ? JSON.parse(userStr) : { email: 'guest@example.com', name: 'Guest' }
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget)
@@ -43,7 +53,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
         position="fixed"
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
-          backgroundColor: 'primary.main',
+          backgroundColor: mode === 'dark' ? '#1E1E1E' : 'primary.main',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         }}
       >
@@ -81,6 +91,7 @@ const Header = ({ onMenuClick }: HeaderProps) => {
             width: 220,
             mt: 1,
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            backgroundColor: mode === 'dark' ? '#1E1E1E' : '#FFFFFF',
           },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
@@ -88,10 +99,10 @@ const Header = ({ onMenuClick }: HeaderProps) => {
       >
         <Box sx={{ px: 2, py: 1.5 }}>
           <Typography variant="subtitle1" fontWeight="bold">
-            Demo User
+            {user.name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            admin@inventory.com
+            {user.email}
           </Typography>
         </Box>
         <Divider />

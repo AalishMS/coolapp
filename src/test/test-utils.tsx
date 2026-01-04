@@ -1,12 +1,11 @@
 import { render, RenderOptions } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider } from '@mui/material/styles'
-import theme from '../styles/theme'
+import { ThemeProvider } from '../context/ThemeContext'
 
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <BrowserRouter>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider>
         {children}
       </ThemeProvider>
     </BrowserRouter>
