@@ -1,0 +1,177 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { useProductStore } from '../store/productStore'
+
+describe('Product Store', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('should initialize with empty products', async () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    await act(async () => {
+      await result.current.fetchProducts()
+    })
+
+    expect(result.current.products).toBeDefined()
+    expect(result.current.loading).toBe(false)
+    expect(result.current.error).toBe(null)
+  })
+
+  it('should add product successfully', async () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    const productData = {
+      name: 'Test Product',
+      sku: 'TEST-001',
+      description: 'Test Description',
+      category: 'Electronics',
+      price: 99.99,
+      cost: 50.00,
+      quantity: 10,
+      minStock: 5,
+      maxStock: 50,
+      location: 'Warehouse A',
+      supplier: 'Test Supplier',
+    }
+
+    await act(async () => {
+      await result.current.addProduct(productData)
+    })
+
+    expect(result.current.products.length).toBeGreaterThan(0)
+  })
+
+  it('should search products', () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    // Add mock products for testing
+    const mockProducts = [
+      { id: '1', name: 'Laptop Pro', sku: 'LP-001', category: 'Electronics' },
+      { id: '2', name: 'Wireless Mouse', sku: 'WM-002', category: 'Electronics' },
+      { id: '3', name: 'Office Chair', sku: 'OC-003', category: 'Furniture' },
+    ] as any
+
+    // Directly set products for testing
+    result.current.products = mockProducts
+
+    const searchResults = result.current.searchProducts('Laptop')
+    expect(searchResults).toHaveLength(1)
+    expect(searchResults[0].name).toBe('Laptop Pro')
+  })
+
+  it('should filter products by category', () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    // Add mock products for testing
+    const mockProducts = [
+      { id: '1', name: 'Laptop Pro', sku: 'LP-001', category: 'Electronics' },
+      { id: '2', name: 'Wireless Mouse', sku: 'WM-002', category: 'Electronics' },
+      { id: '3', name: 'Office Chair', sku: 'OC-003', category: 'Furniture' },
+    ] as any
+
+    // Directly set products for testing
+    result.current.products = mockProducts
+
+    const filteredResults = result.current.filterProducts({ category: 'Electronics' })
+    expect(filteredResults).toHaveLength(2)
+    expect(filteredResults.every(p => p.category === 'Electronics')).toBe(true)
+  })
+})
+
+  it('should initialize with empty products', () => {
+    const { result } = renderHook(() => useProductStore())
+    expect(result.current.products).toEqual([])
+    expect(result.current.loading).toBe(false)
+    expect(result.current.error).toBe(null)
+  })
+
+  it('should add product successfully', async () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    const productData = {
+      name: 'Test Product',
+      sku: 'TEST-001',
+      description: 'Test Description',
+      category: 'Electronics',
+      price: 99.99,
+      cost: 50.00,
+      quantity: 10,
+      minStock: 5,
+      maxStock: 50,
+      location: 'Warehouse A',
+      supplier: 'Test Supplier',
+    }
+
+    await act(async () => {
+      await result.current.addProduct(productData)
+    })
+
+    expect(result.current.products).toHaveLength(1)
+    expect(result.current.products[0].name).toBe('Test Product')
+  })
+
+  it('should delete product', async () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    // Add a product first
+    const productData = {
+      name: 'Test Product',
+      sku: 'TEST-001',
+      description: 'Test Description',
+      category: 'Electronics',
+      price: 99.99,
+      cost: 50.00,
+      quantity: 10,
+      minStock: 5,
+      maxStock: 50,
+      location: 'Warehouse A',
+      supplier: 'Test Supplier',
+    }
+
+    await act(async () => {
+      await result.current.addProduct(productData)
+    })
+
+    expect(result.current.products).toHaveLength(1)
+
+    // Delete the product
+    await act(async () => {
+      await result.current.deleteProduct(result.current.products[0].id)
+    })
+
+    expect(result.current.products).toHaveLength(0)
+  })
+
+  it('should search products', () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    // Add mock products for testing
+    result.current.products = [
+      { id: '1', name: 'Laptop Pro', sku: 'LP-001', category: 'Electronics' },
+      { id: '2', name: 'Wireless Mouse', sku: 'WM-002', category: 'Electronics' },
+      { id: '3', name: 'Office Chair', sku: 'OC-003', category: 'Furniture' },
+    ] as any
+
+    const searchResults = result.current.searchProducts('Laptop')
+    expect(searchResults).toHaveLength(1)
+    expect(searchResults[0].name).toBe('Laptop Pro')
+  })
+
+  it('should filter products by category', () => {
+    const { result } = renderHook(() => useProductStore())
+    
+    // Add mock products for testing
+    result.current.products = [
+      { id: '1', name: 'Laptop Pro', sku: 'LP-001', category: 'Electronics' },
+      { id: '2', name: 'Wireless Mouse', sku: 'WM-002', category: 'Electronics' },
+      { id: '3', name: 'Office Chair', sku: 'OC-003', category: 'Furniture' },
+    ] as any
+
+    const filteredResults = result.current.filterProducts({ category: 'Electronics' })
+    expect(filteredResults).toHaveLength(2)
+    expect(filteredResults.every(p => p.category === 'Electronics')).toBe(true)
+  })
+})
