@@ -144,11 +144,11 @@ export const useStockStore = create<StockStore>()(
           }
         },
 
-        addTransaction: async (transaction: Omit<StockTransaction, 'id'>) => {
+        addTransaction: async (transaction: Omit<StockTransaction, 'id' | 'createdAt'>) => {
           set({ loading: true, error: null })
           try {
             await new Promise(resolve => setTimeout(resolve, 300))
-            
+
             const newTransaction: StockTransaction = {
               id: Date.now().toString(),
               ...transaction,

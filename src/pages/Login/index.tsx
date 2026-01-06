@@ -1,45 +1,84 @@
-import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { Box, Paper, Typography, TextField, Button, Alert, Container } from '@mui/material'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { Box, Paper, Typography, TextField, Button, InputAdornment, IconButton, Alert, Container, Chip } from '@mui/material'
+import { Email, Lock, Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material'
+import { useAuth } from '../../context/AuthContext'
 import { useThemeContext } from '../../context/ThemeContext'
 
-interface User {
+interface LoginForm {
   email: string
-  name: string
+  password: string
 }
 
 const Login = () => {
-  const navigate = useNavigate()
+  const { login, error: authError, clearError } = useAuth()
   const { mode } = useThemeContext()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline' | 'db_error'>('checking')
 
-  const userStr = localStorage.getItem('user')
-  if (userStr) {
-    const user = JSON.parse(userStr) as User
-    return <Navigate to="/dashboard" replace />
+  useEffect(() => {
+    checkServerStatus()
+  }, [])
+
+  const checkServerStatus = async () => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || '/api'
+      const response = await fetch(`${API_URL}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(5000)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        if (data.database === 'connected') {
+          setServerStatus('online')
+        } else {
+          setServerStatus('db_error')
+        }
+      } else if (response.status === 503) {
+        setServerStatus('db_error')
+      } else {
+        setServerStatus('offline')
+      }
+    } catch {
+      setServerStatus('offline')
+    }
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>()
+
+  const onSubmit = async (data: LoginForm) => {
+    setLocalError(null)
+    clearError()
     setLoading(true)
 
-    await new Promise((r) => setTimeout(r, 500))
-
-    if (email && password) {
-      const user: User = {
-        email,
-        name: email.split('@')[0],
+    try {
+      await login({ email: data.email, password: data.password })
+    } catch (err: any) {
+      const errorData = err.response?.data
+      const status = err.response?.status
+      
+      if (status === 503) {
+        setLocalError('Database connection unavailable. Please try again later.')
+        setServerStatus('db_error')
+      } else if (errorData?.message) {
+        setLocalError(errorData.message)
+      } else if (err.message) {
+        setLocalError(err.message)
+      } else if (!navigator.onLine) {
+        setLocalError('Cannot connect to server. Please check your internet connection.')
+      } else {
+        setLocalError('Login failed. Please try again.')
       }
-      localStorage.setItem('user', JSON.stringify(user))
-      navigate('/dashboard')
-    } else {
-      setError('Please enter email and password')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -49,66 +88,199 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: mode === 'dark' ? '#121212' : '#F5F5F5',
+        backgroundColor: mode === 'dark' ? '#1C1C1E' : '#F5F5F7',
+        padding: 2,
       }}
     >
-      <Container maxWidth="xs">
+      <Container maxWidth="sm">
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
             p: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            backgroundColor: mode === 'dark' ? '#1E1E1E' : '#FFFFFF',
+            borderRadius: 3,
+            backgroundColor: mode === 'dark' ? '#2C2C2E' : '#FFFFFF',
+            border: mode === 'dark' ? '1px solid #38383A' : '1px solid #D2D2D7',
           }}
         >
-          <Typography variant="h4" component="h1" gutterBottom>
-            Inventory
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Sign in to your account
-          </Typography>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: 600,
+                color: mode === 'dark' ? '#FFFFFF' : '#1D1D1F',
+                mb: 1,
+              }}
+            >
+              Inventory
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B' }}
+            >
+              Sign in to your account
+            </Typography>
+            
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+              <Chip
+                size="small"
+                icon={serverStatus === 'online' ? <CheckCircle /> : <Cancel />}
+                label={
+                  serverStatus === 'checking' ? 'Checking server...' : 
+                  serverStatus === 'online' ? 'Server online' : 
+                  serverStatus === 'db_error' ? 'Database error' :
+                  'Server offline'
+                }
+                color={serverStatus === 'online' ? 'success' : serverStatus === 'offline' || serverStatus === 'db_error' ? 'error' : 'default'}
+                sx={{ borderRadius: 1 }}
+              />
+            </Box>
+          </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
+          {(authError || localError) && (
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => { setLocalError(null); clearError() }}>
+              {authError || localError}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleLogin} sx={{ width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ width: '100%' }}>
             <TextField
               fullWidth
               label="Email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              autoComplete="email"
+              error={!!errors.email}
+              helperText={errors.email?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Email sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B' }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '& fieldset': {
+                    borderColor: mode === 'dark' ? '#38383A' : '#D2D2D7',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: mode === 'dark' ? '#48484A' : '#007AFF',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#007AFF',
+                    borderWidth: 2,
+                  },
+                },
+              }}
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^\S+@\S+\.\S+$/,
+                  message: 'Please enter a valid email',
+                },
+              })}
             />
+
             <TextField
               fullWidth
               label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              autoComplete="current-password"
+              type={showPassword ? 'text' : 'password'}
+              error={!!errors.password}
+              helperText={errors.password?.message}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Lock sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      edge="end"
+                      sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B' }}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '& fieldset': {
+                    borderColor: mode === 'dark' ? '#38383A' : '#D2D2D7',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: mode === 'dark' ? '#48484A' : '#007AFF',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#007AFF',
+                    borderWidth: 2,
+                  },
+                },
+              }}
+              {...register('password', { required: 'Password is required' })}
             />
+
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+              disabled={loading || serverStatus === 'offline' || serverStatus === 'db_error'}
+              sx={{
+                py: 1.5,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '1rem',
+                boxShadow: 'none',
+                backgroundColor: '#007AFF',
+                '&:hover': {
+                  backgroundColor: '#0056CC',
+                  boxShadow: '0 4px 12px rgba(0, 122, 255, 0.3)',
+                },
+                '&:disabled': {
+                  backgroundColor: mode === 'dark' ? '#48484A' : '#D2D2D7',
+                },
+              }}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </Box>
 
-          <Typography variant="caption" color="text.secondary">
-            Demo: enter any email and password
-          </Typography>
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B' }}>
+              Don't have an account?{' '}
+              <Link
+                to="/register"
+                style={{
+                  color: '#007AFF',
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Create one
+              </Link>
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${mode === 'dark' ? '#38383A' : '#D2D2D7'}` }}>
+            <Typography variant="caption" sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B', display: 'block', mb: 1 }}>
+              Demo Credentials:
+            </Typography>
+            <Typography variant="caption" sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B', display: 'block' }}>
+              Email: admin@inventory.com
+            </Typography>
+            <Typography variant="caption" sx={{ color: mode === 'dark' ? '#8E8E93' : '#86868B', display: 'block' }}>
+              Password: Admin@123
+            </Typography>
+            <Typography variant="caption" sx={{ color: mode === 'dark' ? '#FF9500' : '#ED6C02', display: 'block', mt: 1 }}>
+              Note: Run "npm run seed" in server/ to create admin user
+            </Typography>
+          </Box>
         </Paper>
       </Container>
     </Box>

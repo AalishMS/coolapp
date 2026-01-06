@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Box, Grid, Typography, Paper } from '@mui/material'
 import {
   Inventory as InventoryIcon,
@@ -8,16 +8,16 @@ import {
 } from '@mui/icons-material'
 import { KPICard, CustomChart, ActivityFeed } from '../../components/ui'
 import { mockProducts } from '../../data/mockData'
-import { format, subDays, startOfDay } from 'date-fns'
+import { format, subDays } from 'date-fns'
 
 const Dashboard = () => {
-  const [kpiData, setKpiData] = useState({
+  const [kpiData] = useState({
     totalProducts: mockProducts.length,
     lowStockItems: mockProducts.filter(p => p.quantity <= p.minStock).length,
     totalValue: mockProducts.reduce((sum, product) => sum + (product.price * product.quantity), 0),
     monthlyGrowth: 12.5,
   })
-  const [loading, setLoading] = useState(false)
+  const [loading] = useState(false)
 
   // Generate mock stock levels data for chart
   const generateStockData = () => {
@@ -114,8 +114,16 @@ const Dashboard = () => {
 
   // Generate mock activities
   const generateActivities = () => {
-    const activities = []
-    const types = ['stock-in', 'stock-out', 'adjustment', 'product-updated']
+    const activities: Array<{
+      id: string
+      type: 'stock-in' | 'stock-out' | 'adjustment' | 'product-added' | 'product-updated'
+      productName: string
+      quantity: number
+      timestamp: Date
+      user: string
+      notes?: string
+    }> = []
+    const types = ['stock-in', 'stock-out', 'adjustment', 'product-updated'] as const
     const products = mockProducts.slice(0, 5)
 
     for (let i = 0; i < 10; i++) {
